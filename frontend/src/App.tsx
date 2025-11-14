@@ -12,6 +12,7 @@ import ToolsPage from './pages/Tools';
 import DomainCreatePage from './pages/DomainCreate';
 import DnsEditorPage from './pages/DnsEditor';
 import DomainsListView from './pages/DomainsListView';
+import WHMServers from './pages/WHMServers';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { authenticated, loading } = useAuth();
@@ -81,6 +82,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <DomainsListView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/whm"
+              element={
+                <ProtectedRoute>
+                  <WHMServers />
                 </ProtectedRoute>
               }
             />

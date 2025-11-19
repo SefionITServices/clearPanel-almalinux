@@ -40,6 +40,17 @@ cd clearPanel-almalinux
 2. **Environment configuration**
    - Copy `.env.example` to `.env` in each module (`backend`, `frontend`) and set API URLs, credentials, session secrets, and ports.
    - Update JSON data stores in `backend` (`dns.json`, `domains.json`, `server-settings.json`) to match your infrastructure.
+   - For nameserver support, confirm `backend/server-settings.json` defines `primaryNameserver`, `secondaryNameserver`, and `publicIp`. These values are consumed by the DNS automation APIs used when provisioning domains.
+   - Optional but recommended: mirror the reference structure from the Ubuntu repo if you need an example of expected values.
+3. **Nameserver prerequisites (BIND or external provider)**
+   - If you host DNS on this VPS, follow `docs/DNS-SERVER.md` to install and configure BIND9 on AlmaLinux (package: `bind bind-utils`).
+   - Configure glue records at your registrar pointing `ns1.yourdomain.com`, `ns2.yourdomain.com` (or higher counts) to the VPS IP(s).
+   - Ensure the firewall allows DNS (UDP/TCP 53) if authoritative service runs locally:
+     ```bash
+     sudo firewall-cmd --permanent --add-service=dns
+     sudo firewall-cmd --reload
+     ```
+   - If you rely on an external DNS provider, adjust `backend/server-settings.json` and `backend/dns.json` to use API credentials/endpoints for that provider instead, and skip local BIND setup.
 3. **Build the bundles**
    ```bash
    cd /opt/clearpanel/clearPanel-almalinux/backend

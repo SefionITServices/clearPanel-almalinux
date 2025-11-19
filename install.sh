@@ -58,18 +58,6 @@ else
     echo -e "${RED}Please use the Ubuntu version for Debian-based systems${NC}"
     exit 1
 fi
-    
-    # Generate random session secret
-    SESSION_SECRET=$(openssl rand -hex 32)
-    sed -i "s/change-this-to-a-random-secure-string/$SESSION_SECRET/" .env
-    
-    echo "Configuration file created: .env"
-    echo ""
-    echo "⚠️  IMPORTANT: Edit .env to change default credentials!"
-    echo "   Default username: admin"
-    echo "   Default password: admin123"
-    echo ""
-    read -p "Press Enter to edit .env now, or Ctrl+C to skip..."
 
 # Install Node.js 20+ if not present
 NODE_VERSION=$(node -v 2>/dev/null | cut -d'v' -f2 | cut -d'.' -f1 || echo "0")

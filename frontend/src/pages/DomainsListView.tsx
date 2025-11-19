@@ -1,8 +1,15 @@
 import * as React from 'react';
 import {
+  Card,
+  Button,
   Box,
   Typography,
+  Stack,
+  InputAdornment,
+  TextField,
+  Switch,
   Chip,
+  Link,
   IconButton,
   Dialog,
   DialogTitle,
@@ -11,90 +18,55 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Avatar,
-  Button,
-  useTheme,
-  alpha,
 } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
-import {
-  Home as HomeIcon,
-  OpenInNew as OpenInNewIcon,
-  Build as BuildIcon,
-  Email as EmailIcon,
-  InfoOutlined as InfoOutlinedIcon,
-  Delete as DeleteIcon,
-  Web as WebIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-} from '@mui/icons-material';
-
-import { ModernDashboardLayout } from '../layouts/ModernDashboardLayout';
-import { DataTable, TableColumn } from '../components/data-table';
-import { StatsCard } from '../components/dashboard/DashboardWidgets';
-
-interface Domain {
-  id: string;
-  name: string;
-  isMain: boolean;
-  redirectsTo: string;
-  status: 'active' | 'suspended' | 'expired';
-  ssl: boolean;
-  created: Date;
-  expires?: Date;
-}
+import SearchIcon from '@mui/icons-material/Search';
+import HomeIcon from '@mui/icons-material/Home';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import BuildIcon from '@mui/icons-material/Build';
+import EmailIcon from '@mui/icons-material/Email';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { DashboardLayout } from '../layouts/dashboard/layout';
 
 export default function DomainsListView() {
-  const theme = useTheme();
   const navigate = useNavigate();
-  const [domains, setDomains] = React.useState<Domain[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [domains, setDomains] = React.useState<any[]>([]);
+  const [search, setSearch] = React.useState('');
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [target, setTarget] = React.useState<Domain | null>(null);
+  const [target, setTarget] = React.useState<any | null>(null);
   const [snack, setSnack] = React.useState<{open: boolean; message: string; severity: 'success'|'error'}>({ open: false, message: '', severity: 'success' });
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  // Simpler selection handling removed to avoid undefined size error in footer
 
   React.useEffect(() => {
-    setLoading(true);
     fetch('/api/domains').then(r => r.json()).then((data) => {
+      // Mark sefion.cloud as primary and sort it first
       const mapped = data.map((d: any) => ({
         ...d,
         id: d.id,
         isMain: d.name === 'sefion.cloud',
         redirectsTo: 'Not Redirected',
-        ssl: Math.random() > 0.3,
-        status: Math.random() > 0.1 ? 'active' : (Math.random() > 0.5 ? 'suspended' : 'expired'),
-        created: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-        expires: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000),
+        forceHttps: false,
       })).sort((a: any, b: any) => (a.name === 'sefion.cloud' ? -1 : b.name === 'sefion.cloud' ? 1 : 0));
       setDomains(mapped);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
     });
   }, []);
 
   const refreshDomains = async () => {
-    setLoading(true);
-    try {
-      const data = await fetch('/api/domains').then(r => r.json());
-      const mapped = data.map((d: any) => ({
-        ...d,
-        id: d.id,
-        isMain: d.name === 'sefion.cloud',
-        redirectsTo: 'Not Redirected',
-        ssl: Math.random() > 0.3,
-        status: Math.random() > 0.1 ? 'active' : (Math.random() > 0.5 ? 'suspended' : 'expired'),
-        created: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-        expires: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000),
-      })).sort((a: any, b: any) => (a.name === 'sefion.cloud' ? -1 : b.name === 'sefion.cloud' ? 1 : 0));
-      setDomains(mapped);
-    } finally {
-      setLoading(false);
-    }
+    const data = await fetch('/api/domains').then(r => r.json());
+    const mapped = data.map((d: any) => ({
+      ...d,
+      id: d.id,
+      isMain: d.name === 'sefion.cloud',
+      redirectsTo: 'Not Redirected',
+      forceHttps: false,
+    })).sort((a: any, b: any) => (a.name === 'sefion.cloud' ? -1 : b.name === 'sefion.cloud' ? 1 : 0));
+    setDomains(mapped);
   };
 
-  const askDelete = (row: Domain) => { setTarget(row); setConfirmOpen(true); };
+  const askDelete = (row: any) => { setTarget(row); setConfirmOpen(true); };
   const doDelete = async () => {
     if (!target) return;
     setDeletingId(target.id);
@@ -116,219 +88,180 @@ export default function DomainsListView() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'suspended': return 'warning';
-      case 'expired': return 'error';
-      default: return 'default';
-    }
-  };
+  const filtered = domains.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()));
 
-  const columns: TableColumn<Domain>[] = [
+  const columns: GridColDef[] = [
     {
-      id: 'name',
-      label: 'Domain',
-      render: (value, row) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12) }}>
-            <WebIcon color="primary" />
-          </Avatar>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {value}
-              </Typography>
-              <IconButton size="small" onClick={() => window.open(`https://${value}`, '_blank')}>
-                <OpenInNewIcon fontSize="small" />
-              </IconButton>
-              {row.isMain && (
-                <Chip label="Primary" color="primary" size="small" />
-              )}
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              Created: {row.created.toLocaleDateString()}
+      field: 'name',
+      headerName: 'Domain',
+      flex: 1.2,
+      minWidth: 220,
+      renderCell: (params) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Link href={`http://${params.value}`} target="_blank" underline="hover" sx={{ fontWeight: 600 }}>
+            {params.value}
+          </Link>
+          <OpenInNewIcon fontSize="small" color="action" />
+          {params.row.isMain && (
+            <Chip label="Main Domain" color="primary" size="small" sx={{ ml: 1, fontWeight: 500 }} />
+          )}
+        </Stack>
+      ),
+    },
+    {
+      field: 'nameservers',
+      headerName: 'Nameservers',
+      flex: 1,
+      minWidth: 200,
+      renderCell: (params) => {
+        const list = Array.isArray(params.value) ? params.value.filter((ns: string) => !!ns) : [];
+        if (!list.length) {
+          return (
+            <Typography variant="body2" color="text.secondary">
+              Default (ns1/ns2)
             </Typography>
-          </Box>
-        </Box>
+          );
+        }
+        return (
+          <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+            {list.map((ns: string) => (
+              <Chip key={ns} label={ns} size="small" variant="outlined" />
+            ))}
+          </Stack>
+        );
+      },
+    },
+    {
+      field: 'folderPath',
+      headerName: 'Document Root',
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <HomeIcon fontSize="small" color="action" />
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>{params.value}</Typography>
+        </Stack>
       ),
     },
     {
-      id: 'status',
-      label: 'Status',
-      render: (value) => (
-        <Chip
-          label={value.charAt(0).toUpperCase() + value.slice(1)}
-          color={getStatusColor(value) as any}
-          size="small"
-        />
-      ),
-    },
-    {
-      id: 'ssl',
-      label: 'SSL',
-      render: (value) => (
-        <Chip
-          label={value ? 'Enabled' : 'Disabled'}
-          color={value ? 'success' : 'error'}
-          size="small"
-          variant="outlined"
-        />
-      ),
-    },
-    {
-      id: 'expires',
-      label: 'Expires',
-      render: (value) => value ? (
-        <Box>
-          <Typography variant="body2">
-            {value.toLocaleDateString()}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {Math.ceil((value.getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days
-          </Typography>
-        </Box>
-      ) : 'Never',
-    },
-    {
-      id: 'redirectsTo',
-      label: 'Redirect',
-      render: (value) => (
-        <Typography variant="body2" color={value === 'Not Redirected' ? 'text.secondary' : 'text.primary'}>
-          {value}
+      field: 'redirectsTo',
+      headerName: 'Redirects To',
+      flex: 1,
+      minWidth: 160,
+      renderCell: (params) => (
+        <Typography variant="body2" color="text.secondary">
+          {params.value}
         </Typography>
       ),
     },
+    {
+      field: 'forceHttps',
+      headerName: 'Force HTTPS Redirect',
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Switch checked={!!params.value} size="small" />
+          <Typography variant="caption" color={params.value ? 'primary' : 'text.secondary'}>
+            {params.value ? 'on' : 'off'}
+          </Typography>
+          <IconButton size="small">
+            <InfoOutlinedIcon fontSize="small" color="action" />
+          </IconButton>
+        </Stack>
+      ),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 1.2,
+      minWidth: 260,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" size="small" startIcon={<BuildIcon />}>
+            Manage
+          </Button>
+          <Button variant="outlined" size="small" startIcon={<EmailIcon />}>
+            Create Email
+          </Button>
+          <span>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => askDelete(params.row)}
+              title="Delete Domain"
+              disabled={deletingId === params.row.id}
+            >
+              {deletingId === params.row.id ? <CircularProgress size={18} /> : <DeleteIcon />}
+            </IconButton>
+          </span>
+        </Stack>
+      ),
+    },
   ];
-
-  const actions = [
-    {
-      label: 'Edit',
-      icon: <EditIcon />,
-      onClick: (domain: Domain) => navigate(`/domains/${domain.id}/edit`),
-    },
-    {
-      label: 'DNS Settings',
-      icon: <BuildIcon />,
-      onClick: (domain: Domain) => navigate('/dns', { state: { domain: domain.name } }),
-    },
-    {
-      label: 'Email Settings',
-      icon: <EmailIcon />,
-      onClick: (domain: Domain) => navigate(`/domains/${domain.id}/email`),
-    },
-    {
-      label: 'Delete',
-      icon: <DeleteIcon />,
-      onClick: (domain: Domain) => askDelete(domain),
-      color: 'error' as const,
-    },
-  ];
-
-  const activeDomains = domains.filter(d => d.status === 'active').length;
-  const sslEnabledDomains = domains.filter(d => d.ssl).length;
-  const expiringDomains = domains.filter(d => 
-    d.expires && d.expires.getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000
-  ).length;
 
   return (
-    <ModernDashboardLayout>
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              Domain Management
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage your domains, DNS settings, and SSL certificates
-            </Typography>
-          </Box>
+    <DashboardLayout>
+      <Box sx={{ maxWidth: 1300, mx: 'auto', mt: 2 }}>
+        <Typography variant="h3" sx={{ fontWeight: 700, mb: 0.5 }}>
+          Domains
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          List Domains
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Use this interface to manage your domains. For more information, read the documentation.
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <TextField
+            placeholder="Search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            size="small"
+            sx={{ width: 300 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
           <Button
             variant="contained"
-            startIcon={<AddIcon />}
+            sx={{ minWidth: 180 }}
             onClick={() => navigate('/domains/new')}
           >
-            Add Domain
+            Create A New Domain
           </Button>
-        </Box>
-
-        {/* Stats Cards */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 4 }}>
-          <StatsCard
-            title="Total Domains"
-            value={domains.length}
-            subtitle="Registered domains"
-            icon={<WebIcon />}
-            color="primary"
+        </Stack>
+        <Card sx={{ minHeight: 400, p: 2 }}>
+          <DataGrid
+            rows={filtered}
+            columns={columns}
+            disableRowSelectionOnClick
+            autoHeight
+            pagination
+            pageSizeOptions={[5, 10, 25]}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           />
-          <StatsCard
-            title="Active Domains"
-            value={activeDomains}
-            subtitle={`${domains.length > 0 ? Math.round((activeDomains / domains.length) * 100) : 0}% active`}
-            icon={<InfoOutlinedIcon />}
-            color="success"
-          />
-          <StatsCard
-            title="SSL Enabled"
-            value={sslEnabledDomains}
-            subtitle="Secure domains"
-            icon={<BuildIcon />}
-            color="info"
-          />
-          <StatsCard
-            title="Expiring Soon"
-            value={expiringDomains}
-            subtitle="Next 30 days"
-            icon={<InfoOutlinedIcon />}
-            color="warning"
-          />
-        </Box>
-
-        <DataTable
-          title="Domain Management"
-          data={domains}
-          columns={columns}
-          loading={loading}
-          actions={actions}
-          onAdd={() => navigate('/domains/new')}
-          onRefresh={refreshDomains}
-          searchPlaceholder="Search domains..."
-          emptyMessage="No domains found. Add your first domain to get started."
-        />
-
-        {/* Delete Confirmation Dialog */}
+        </Card>
         <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
           <DialogTitle>Delete Domain</DialogTitle>
           <DialogContent>
-            <Typography>
-              Are you sure you want to delete the domain "{target?.name}"? This action cannot be undone.
-            </Typography>
+            Are you sure you want to delete domain "{target?.name}"? This will remove its DNS zone from clearPanel but keep the folder on disk.
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={doDelete} 
-              color="error" 
-              variant="contained"
-              disabled={!!deletingId}
-              startIcon={deletingId ? <CircularProgress size={16} /> : <DeleteIcon />}
-            >
-              {deletingId ? 'Deleting...' : 'Delete'}
-            </Button>
+            <Button color="error" variant="contained" onClick={doDelete} disabled={!!deletingId}>Delete</Button>
           </DialogActions>
         </Dialog>
-
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snack.open}
-          autoHideDuration={6000}
-          onClose={() => setSnack({ ...snack, open: false })}
-        >
-          <Alert severity={snack.severity} onClose={() => setSnack({ ...snack, open: false })}>
-            {snack.message}
-          </Alert>
+        <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({...s, open: false}))}>
+          <Alert severity={snack.severity} onClose={() => setSnack(s => ({...s, open: false}))}>{snack.message}</Alert>
         </Snackbar>
       </Box>
-    </ModernDashboardLayout>
+    </DashboardLayout>
   );
 }

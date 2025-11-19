@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Grid,
   Chip,
   IconButton,
   Dialog,
@@ -22,6 +21,7 @@ import {
   useTheme,
   alpha,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -401,7 +401,7 @@ export default function WHMServers() {
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatsCard
               title="Total Servers"
               value={totalServers}
@@ -410,7 +410,7 @@ export default function WHMServers() {
               color="primary"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatsCard
               title="Online Servers"
               value={onlineServers}
@@ -419,7 +419,7 @@ export default function WHMServers() {
               color="success"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatsCard
               title="Total Accounts"
               value={totalAccounts}
@@ -428,7 +428,7 @@ export default function WHMServers() {
               color="info"
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <StatsCard
               title="Avg Load"
               value={avgLoadAverage.toFixed(2)}
